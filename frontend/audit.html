@@ -1,0 +1,477 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Audit Logs - Enterprise IAM</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f6f9;
+            color: #222;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+        }
+
+        .container {
+            padding: 30px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        select,
+        input,
+        button {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8fafc;
+        }
+
+        .LOW {
+            color: green;
+            font-weight: bold;
+        }
+
+        .MEDIUM {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .HIGH {
+            color: red;
+            font-weight: bold;
+        }
+
+        .SUCCESS {
+            color: green;
+            font-weight: bold;
+        }
+
+        .FAILURE {
+            color: red;
+            font-weight: bold;
+        }
+
+        #message {
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>Enterprise IAM - Audit Logs</h1>
+
+    <button onclick="loadAuditLogs()">
+        Refresh
+    </button>
+
+</header>
+
+
+<div class="container">
+
+    <div class="filters">
+
+        <select id="action">
+
+            <option value="">All Actions</option>
+
+            <option value="LOGIN">
+                LOGIN
+            </option>
+
+            <option value="LOGIN_FAILED">
+                LOGIN_FAILED
+            </option>
+
+            <option value="MFA_SETUP">
+                MFA_SETUP
+            </option>
+
+            <option value="MFA_VERIFY">
+                MFA_VERIFY
+            </option>
+
+            <option value="MFA_DISABLE">
+                MFA_DISABLE
+            </option>
+
+            <option value="ROLE_ASSIGN">
+                ROLE_ASSIGN
+            </option>
+
+            <option value="USER_CREATE">
+                USER_CREATE
+            </option>
+
+            <option value="USER_UPDATE">
+                USER_UPDATE
+            </option>
+
+            <option value="USER_DELETE">
+                USER_DELETE
+            </option>
+
+        </select>
+
+
+        <select id="result">
+
+            <option value="">All Results</option>
+
+            <option value="SUCCESS">
+                SUCCESS
+            </option>
+
+            <option value="FAILURE">
+                FAILURE
+            </option>
+
+        </select>
+
+
+        <select id="riskLevel">
+
+            <option value="">All Risk Levels</option>
+
+            <option value="LOW">
+                LOW
+            </option>
+
+            <option value="MEDIUM">
+                MEDIUM
+            </option>
+
+            <option value="HIGH">
+                HIGH
+            </option>
+
+        </select>
+
+
+        <input
+            type="number"
+            id="limit"
+            value="50"
+            min="1"
+            max="100"
+            placeholder="Limit"
+        >
+
+
+        <button onclick="loadAuditLogs()">
+            Apply Filters
+        </button>
+
+    </div>
+
+
+    <div id="message">
+        Loading audit logs...
+    </div>
+
+
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+
+                    <th>Action</th>
+
+                    <th>Result</th>
+
+                    <th>Risk</th>
+
+                    <th>User ID</th>
+
+                    <th>Resource</th>
+
+                    <th>IP Address</th>
+
+                    <th>Created At</th>
+
+                    <th>Metadata</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="auditTable">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const API_URL = "http://localhost:5000";
+
+
+async function loadAuditLogs() {
+
+    try {
+
+        const token =
+            localStorage.getItem("token");
+
+        if (!token) {
+
+            document.getElementById("message")
+                .textContent =
+                "Please login first.";
+
+            return;
+
+        }
+
+
+        const action =
+            document.getElementById("action").value;
+
+        const result =
+            document.getElementById("result").value;
+
+        const riskLevel =
+            document.getElementById("riskLevel").value;
+
+        const limit =
+            document.getElementById("limit").value;
+
+
+        const params =
+            new URLSearchParams();
+
+
+        if (action)
+            params.append("action", action);
+
+        if (result)
+            params.append("result", result);
+
+        if (riskLevel)
+            params.append("riskLevel", riskLevel);
+
+        if (limit)
+            params.append("limit", limit);
+
+
+        const response =
+            await fetch(
+                `${API_URL}/api/audit-logs?${params.toString()}`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${token}`,
+
+                        "Content-Type":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.message ||
+                "Unable to fetch audit logs"
+            );
+
+        }
+
+
+        const table =
+            document.getElementById("auditTable");
+
+
+        table.innerHTML = "";
+
+
+        if (!data.logs ||
+            data.logs.length === 0) {
+
+            table.innerHTML = `
+                <tr>
+                    <td colspan="9">
+                        No audit logs found
+                    </td>
+                </tr>
+            `;
+
+            document.getElementById("message")
+                .textContent =
+                "No audit logs found.";
+
+            return;
+
+        }
+
+
+        data.logs.forEach(log => {
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+
+                <td>${log.id ?? "-"}</td>
+
+                <td>${log.action ?? "-"}</td>
+
+                <td class="${log.result ?? ""}">
+                    ${log.result ?? "-"}
+                </td>
+
+                <td class="${log.risk_level ?? ""}">
+                    ${log.risk_level ?? "-"}
+                </td>
+
+                <td>${log.user_id ?? "-"}</td>
+
+                <td>${log.resource ?? "-"}</td>
+
+                <td>${log.ip_address ?? "-"}</td>
+
+                <td>
+                    ${log.created_at
+                        ? new Date(log.created_at)
+                            .toLocaleString()
+                        : "-"}
+                </td>
+
+                <td>
+                    <pre>
+${JSON.stringify(
+    log.metadata || {},
+    null,
+    2
+)}
+                    </pre>
+                </td>
+
+            `;
+
+
+            table.appendChild(row);
+
+        });
+
+
+        document.getElementById("message")
+            .textContent =
+            `${data.logs.length} audit log(s) loaded.`;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Audit log error:",
+            error
+        );
+
+        document.getElementById("message")
+            .textContent =
+            error.message;
+
+    }
+
+}
+
+
+loadAuditLogs();
+
+</script>
+
+</body>
+
+</html>

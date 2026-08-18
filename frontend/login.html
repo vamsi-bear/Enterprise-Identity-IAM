@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SecureSphere IAM - Login</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            width: 400px;
+
+            background: white;
+
+            padding: 35px;
+
+            border-radius: 14px;
+
+            box-shadow:
+                0 8px 30px
+                rgba(0, 0, 0, 0.12);
+        }
+
+        .logo {
+            text-align: center;
+
+            font-size: 32px;
+
+            font-weight: bold;
+
+            color: #2563eb;
+
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+
+            color: #666;
+
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            font-weight: bold;
+
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+
+            padding: 13px;
+
+            margin-bottom: 18px;
+
+            border: 1px solid #d1d5db;
+
+            border-radius: 7px;
+
+            font-size: 15px;
+        }
+
+        input:focus {
+            outline: none;
+
+            border-color: #2563eb;
+        }
+
+        button {
+            width: 100%;
+
+            padding: 13px;
+
+            border: none;
+
+            border-radius: 7px;
+
+            background: #2563eb;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 18px;
+
+            text-align: center;
+
+            font-weight: bold;
+
+            min-height: 20px;
+        }
+
+        .security {
+            margin-top: 25px;
+
+            padding: 12px;
+
+            background: #f1f5f9;
+
+            border-radius: 7px;
+
+            text-align: center;
+
+            font-size: 13px;
+
+            color: #475569;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="login-container">
+
+
+    <div class="logo">
+        SecureSphere
+    </div>
+
+
+    <div class="subtitle">
+        Enterprise Identity & Access Management
+    </div>
+
+
+    <form id="loginForm">
+
+
+        <label for="email">
+            Email
+        </label>
+
+
+        <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            autocomplete="email"
+            required
+        >
+
+
+        <label for="password">
+            Password
+        </label>
+
+
+        <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required
+        >
+
+
+        <button
+            type="submit"
+            id="loginButton"
+        >
+            Login
+        </button>
+
+
+    </form>
+
+
+    <p id="message"></p>
+
+
+    <div class="security">
+
+        🔐 Secure authentication powered by
+        JWT + MFA
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+
+// ============================================================
+// API CONFIGURATION
+// ============================================================
+
+const API_URL = "http://localhost:5000";
+
+
+// ============================================================
+// GET ELEMENTS
+// ============================================================
+
+const loginForm =
+    document.getElementById("loginForm");
+
+const emailInput =
+    document.getElementById("email");
+
+const passwordInput =
+    document.getElementById("password");
+
+const loginButton =
+    document.getElementById("loginButton");
+
+const message =
+    document.getElementById("message");
+
+
+// ============================================================
+// LOGIN EVENT
+// ============================================================
+
+loginForm.addEventListener(
+    "submit",
+    login
+);
+
+
+// ============================================================
+// LOGIN FUNCTION
+// ============================================================
+
+async function login(event) {
+
+    event.preventDefault();
+
+
+    // --------------------------------------------------------
+    // GET INPUT VALUES
+    // --------------------------------------------------------
+
+    const email =
+        emailInput.value.trim();
+
+    const password =
+        passwordInput.value;
+
+
+    // --------------------------------------------------------
+    // CLEAR OLD MESSAGE
+    // --------------------------------------------------------
+
+    message.textContent = "";
+
+
+    // --------------------------------------------------------
+    // DISABLE BUTTON
+    // --------------------------------------------------------
+
+    loginButton.disabled = true;
+
+    loginButton.textContent =
+        "Logging in...";
+
+
+    try {
+
+
+        // ====================================================
+        // SEND LOGIN REQUEST
+        // ====================================================
+
+        const response =
+            await fetch(
+                `${API_URL}/api/auth/login`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                }
+            );
+
+
+        // ====================================================
+        // READ RESPONSE
+        // ====================================================
+
+        const data =
+            await response.json();
+
+
+        // ====================================================
+        // DEBUG INFORMATION
+        // ====================================================
+
+        console.log(
+            "Login HTTP status:",
+            response.status
+        );
+
+        console.log(
+            "LOGIN RESPONSE:",
+            data
+        );
+
+
+        // ====================================================
+        // LOGIN REQUEST FAILED
+        // ====================================================
+
+        if (!response.ok || !data.success) {
+
+            message.textContent =
+                data.message ||
+                "Login failed.";
+
+            console.error(
+                "Login failed:",
+                data
+            );
+
+            return;
+        }
+
+
+        // ====================================================
+        // MFA REQUIRED
+        // ====================================================
+
+        if (data.mfaRequired === true) {
+
+            console.log(
+                "MFA is required."
+            );
+
+
+            // ------------------------------------------------
+            // CHECK MFA TOKEN
+            // ------------------------------------------------
+
+            if (!data.mfaToken) {
+
+                console.error(
+                    "MFA token missing from backend response."
+                );
+
+                message.textContent =
+                    "Backend did not return an MFA token.";
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // SAVE TEMPORARY MFA TOKEN
+            // ------------------------------------------------
+
+            localStorage.setItem(
+                "mfaToken",
+                data.mfaToken
+            );
+
+
+            // ------------------------------------------------
+            // SAVE EMAIL FOR MFA PAGE
+            // ------------------------------------------------
+
+            localStorage.setItem(
+                "mfaEmail",
+                email
+            );
+
+
+            // ------------------------------------------------
+            // REMOVE OLD FINAL AUTH TOKEN
+            // ------------------------------------------------
+
+            localStorage.removeItem(
+                "token"
+            );
+
+
+            localStorage.removeItem(
+                "user"
+            );
+
+
+            // ------------------------------------------------
+            // DEBUG
+            // ------------------------------------------------
+
+            console.log(
+                "MFA TOKEN SAVED:"
+            );
+
+            console.log(
+                localStorage.getItem(
+                    "mfaToken"
+                )
+            );
+
+
+            console.log(
+                "MFA EMAIL SAVED:",
+                localStorage.getItem(
+                    "mfaEmail"
+                )
+            );
+
+
+            // ------------------------------------------------
+            // GO TO MFA PAGE
+            // ------------------------------------------------
+
+            window.location.href =
+                "mfa.html";
+
+
+            return;
+        }
+
+
+        // ====================================================
+        // LOGIN WITHOUT MFA
+        // ====================================================
+
+        if (
+            data.mfaRequired === false ||
+            data.mfaRequired === undefined
+        ) {
+
+
+            // ------------------------------------------------
+            // CHECK FINAL JWT
+            // ------------------------------------------------
+
+            if (!data.token) {
+
+                console.error(
+                    "Backend did not return JWT."
+                );
+
+                message.textContent =
+                    "Login succeeded, but no authentication token was received.";
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // SAVE FINAL JWT
+            // ------------------------------------------------
+
+            localStorage.setItem(
+                "token",
+                data.token
+            );
+
+
+            // ------------------------------------------------
+            // SAVE USER
+            // ------------------------------------------------
+
+            if (data.user) {
+
+                localStorage.setItem(
+                    "user",
+                    JSON.stringify(
+                        data.user
+                    )
+                );
+
+            }
+
+
+            // ------------------------------------------------
+            // REMOVE MFA TEMP DATA
+            // ------------------------------------------------
+
+            localStorage.removeItem(
+                "mfaToken"
+            );
+
+            localStorage.removeItem(
+                "mfaEmail"
+            );
+
+
+            // ------------------------------------------------
+            // DEBUG
+            // ------------------------------------------------
+
+            console.log(
+                "FINAL TOKEN SAVED:"
+            );
+
+            console.log(
+                localStorage.getItem(
+                    "token"
+                )
+            );
+
+
+            console.log(
+                "USER SAVED:"
+            );
+
+            console.log(
+                localStorage.getItem(
+                    "user"
+                )
+            );
+
+
+            // ------------------------------------------------
+            // GO TO DASHBOARD
+            // ------------------------------------------------
+
+            window.location.href =
+                "dashboard.html";
+
+
+            return;
+        }
+
+
+    } catch (error) {
+
+
+        // ====================================================
+        // NETWORK / SERVER ERROR
+        // ====================================================
+
+        console.error(
+            "Login error:",
+            error
+        );
+
+
+        message.textContent =
+            "❌ Unable to connect to server.";
+
+
+    } finally {
+
+
+        // ====================================================
+        // ENABLE BUTTON AGAIN
+        // ====================================================
+
+        loginButton.disabled = false;
+
+        loginButton.textContent =
+            "Login";
+
+    }
+
+}
+
+</script>
+
+
+</body>
+
+</html>
