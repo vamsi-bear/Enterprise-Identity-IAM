@@ -335,16 +335,7 @@ export const login = async (req, res) => {
         // Check MFA
         // -------------------------------
 
-        const mfaResult = await pool.query(
-            `
-            SELECT user_id
-            FROM mfa_credentials
-            WHERE user_id = $1
-            `,
-            [user.id]
-        );
-
-        const mfaEnabled = mfaResult.rows.length > 0;
+        const mfaEnabled = user.mfa_enabled === true;
 
         // -------------------------------
         // MFA REQUIRED

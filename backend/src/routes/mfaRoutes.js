@@ -3,6 +3,7 @@ import express from "express";
 import {
     setupMFA,
     verifyMFA,
+    verifyLoginMFA,
     disableMFA
 } from "../controllers/mfaController.js";
 
@@ -29,20 +30,29 @@ router.post(
 
 
 // ============================================================
-// MFA LOGIN VERIFICATION
+// MFA SETUP VERIFICATION
 // POST /api/mfa/verify
 //
-// IMPORTANT:
-// This uses authenticateMfa because the browser sends
-// the temporary mfaToken here.
+// This endpoint is used by an already authenticated user when
+// enabling MFA, so it requires the final authentication token.
 // ============================================================
 
 router.post(
     "/verify",
-    authenticateMfa,
+    authenticate,
     verifyMFA
 );
 
+// MFA VERIFICATION DURING LOGIN
+// POST /api/mfa/verify-login
+//
+// This endpoint accepts the short-lived mfaToken issued after the
+// password check, not a final authenticated session token.
+router.post(
+    "/verify-login",
+    authenticateMfa,
+    verifyLoginMFA
+);
 
 // ============================================================
 // MFA DISABLE

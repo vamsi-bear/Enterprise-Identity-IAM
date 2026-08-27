@@ -180,6 +180,7 @@ export const authenticateMfa = (req, res, next) => {
                 decoded.username || null,
 
             mfaPending: true
+            
         };
 
 

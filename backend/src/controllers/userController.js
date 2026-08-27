@@ -31,11 +31,7 @@ export const getCurrentUser = async (req, res) => {
                     'EMPLOYEE'
                 ) AS role,
 
-                EXISTS (
-                    SELECT 1
-                    FROM mfa_credentials m
-                    WHERE m.user_id = u.id
-                ) AS "mfaEnabled",
+                u.mfa_enabled AS "mfaEnabled",
 
                 COALESCE(
                     (
