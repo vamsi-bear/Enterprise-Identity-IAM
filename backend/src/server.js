@@ -19,7 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ============================================================
-// SERVER START
+// SERVER INFO
 // ============================================================
 
 console.log("🚀 server.js loaded");
@@ -47,8 +47,7 @@ app.use(
     cors({
         origin: function (origin, callback) {
 
-            // Allow requests without Origin
-            // Example: Postman, curl
+            // Allow Postman, curl and requests without Origin
             if (!origin) {
                 return callback(null, true);
             }
@@ -95,7 +94,6 @@ app.use(express.json());
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-
     standardHeaders: true,
     legacyHeaders: false
 });
@@ -252,7 +250,7 @@ const server = app.listen(
  ✓ PostgreSQL
 
 ========================================
-`);
+        `);
 
     }
 );
