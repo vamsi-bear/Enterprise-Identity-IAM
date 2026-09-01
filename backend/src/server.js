@@ -19,6 +19,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ============================================================
+// SERVER START
+// ============================================================
+
+console.log("🚀 server.js loaded");
+console.log("🔵 About to start server...");
+console.log("🔵 PORT =", PORT);
+
+// ============================================================
 // ALLOWED FRONTEND ORIGINS
 // ============================================================
 
@@ -30,7 +38,7 @@ const allowedOrigins = [
 ];
 
 // ============================================================
-// SECURITY MIDDLEWARE
+// SECURITY
 // ============================================================
 
 app.use(helmet());
@@ -39,7 +47,8 @@ app.use(
     cors({
         origin: function (origin, callback) {
 
-            // Allow Postman, curl, etc.
+            // Allow requests without Origin
+            // Example: Postman, curl
             if (!origin) {
                 return callback(null, true);
             }
@@ -73,6 +82,10 @@ app.use(
     })
 );
 
+// ============================================================
+// BODY PARSER
+// ============================================================
+
 app.use(express.json());
 
 // ============================================================
@@ -81,25 +94,13 @@ app.use(express.json());
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100
+    max: 100,
+
+    standardHeaders: true,
+    legacyHeaders: false
 });
 
 app.use(limiter);
-
-// ============================================================
-// DATABASE TEST
-// ============================================================
-
-pool.query("SELECT NOW()")
-    .then(() => {
-        console.log("✅ Database query successful");
-    })
-    .catch((error) => {
-        console.error(
-            "❌ Database query failed:",
-            error
-        );
-    });
 
 // ============================================================
 // ROUTES
@@ -113,10 +114,7 @@ app.use("/api/users", userRoutes);
 
 app.use("/api/roles", roleRoutes);
 
-app.use(
-    "/api/audit-logs",
-    auditRoutes
-);
+app.use("/api/audit-logs", auditRoutes);
 
 // ============================================================
 // HEALTH CHECK
@@ -126,15 +124,13 @@ app.get("/api/health", async (req, res) => {
 
     try {
 
-        const result =
-            await pool.query("SELECT NOW()");
+        const result = await pool.query("SELECT NOW()");
 
-        res.json({
+        res.status(200).json({
 
             status: "success",
 
-            message:
-                "Enterprise IAM API is running",
+            message: "Enterprise IAM API is running",
 
             database: "connected",
 
@@ -145,7 +141,7 @@ app.get("/api/health", async (req, res) => {
     } catch (error) {
 
         console.error(
-            "Health check error:",
+            "❌ Health check database error:",
             error
         );
 
@@ -153,8 +149,7 @@ app.get("/api/health", async (req, res) => {
 
             status: "error",
 
-            message:
-                "Database connection failed"
+            message: "Database connection failed"
 
         });
 
@@ -163,14 +158,77 @@ app.get("/api/health", async (req, res) => {
 });
 
 // ============================================================
-// SERVER
+// DATABASE CONNECTION TEST
 // ============================================================
 
-console.log("🚀 server.js loaded");
+pool.query("SELECT NOW()")
+    .then(() => {
 
-console.log("🔵 About to start server...");
+        console.log("✅ PostgreSQL connected");
 
-console.log("🔵 PORT =", PORT);
+        console.log("✅ Database query successful");
+
+    })
+    .catch((error) => {
+
+        console.error(
+            "❌ Database query failed:",
+            error
+        );
+
+    });
+
+// ============================================================
+// 404 HANDLER
+// ============================================================
+
+app.use((req, res) => {
+
+    res.status(404).json({
+
+        success: false,
+
+        message: "API route not found",
+
+        path: req.originalUrl
+
+    });
+
+});
+
+// ============================================================
+// ERROR HANDLER
+// ============================================================
+
+app.use((error, req, res, next) => {
+
+    console.error("❌ Server error:", error);
+
+    if (error.message === "CORS: Origin not allowed") {
+
+        return res.status(403).json({
+
+            success: false,
+
+            message: "CORS: Origin not allowed"
+
+        });
+
+    }
+
+    res.status(500).json({
+
+        success: false,
+
+        message: "Internal server error"
+
+    });
+
+});
+
+// ============================================================
+// START SERVER
+// ============================================================
 
 const server = app.listen(
     PORT,
@@ -185,7 +243,7 @@ const server = app.listen(
  🟢 API running on port ${PORT}
 
  Environment:
- ${process.env.NODE_ENV || "Development"}
+ ${process.env.NODE_ENV || "development"}
 
  Security:
  ✓ Helmet
@@ -194,10 +252,14 @@ const server = app.listen(
  ✓ PostgreSQL
 
 ========================================
-        `);
+`);
 
     }
 );
+
+// ============================================================
+// SERVER ERROR
+// ============================================================
 
 server.on("error", (error) => {
 
