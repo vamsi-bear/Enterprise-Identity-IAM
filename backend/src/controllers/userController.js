@@ -153,6 +153,212 @@ export const getAllUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
     try {
+        const {
+            username,
+            email,
+            password,
+            firstName,
+            lastName,
+            role
+        } = req.body;
+
+        // --------------------------------
+        // Validation
+        // --------------------------------
+
+        if (!username || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Username, email and password are required"
+            });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must contain at least 8 characters"
+            });
+        }
+
+        // --------------------------------
+        // Normalize role
+        // --------------------------------
+
+        const normalizedRole = role
+            ? String(role).trim().toUpperCase()
+            : "EMPLOYEE";
+
+        const allowedRoles = [
+            "EMPLOYEE",
+            "DEVELOPER",
+            "ADMIN",
+            "SUPER_ADMIN"
+        ];
+
+        if (!allowedRoles.includes(normalizedRole)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role"
+            });
+        }
+
+        // --------------------------------
+        // Check role exists in database
+        // --------------------------------
+
+        const roleResult = await pool.query(
+            `
+            SELECT id, name
+            FROM roles
+            WHERE UPPER(name) = $1
+            `,
+            [normalizedRole]
+        );
+
+        if (roleResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role"
+            });
+        }
+
+        // --------------------------------
+        // Check existing user
+        // --------------------------------
+
+        const existingUser = await pool.query(
+            `
+            SELECT id
+            FROM users
+            WHERE username = $1
+               OR email = $2
+            `,
+            [username, email]
+        );
+
+        if (existingUser.rows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: "Username or email already exists"
+            });
+        }
+
+        // --------------------------------
+        // Hash password
+        // --------------------------------
+
+        const hashedPassword =
+            await bcrypt.hash(password, 12);
+
+        // --------------------------------
+        // Create user
+        // --------------------------------
+
+        const userResult = await pool.query(
+            `
+            INSERT INTO users
+            (
+                username,
+                email,
+                password_hash,
+                first_name,
+                last_name
+            )
+            VALUES
+            (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5
+            )
+            RETURNING
+                id,
+                username,
+                email,
+                first_name AS "firstName",
+                last_name AS "lastName"
+            `,
+            [
+                username,
+                email,
+                hashedPassword,
+                firstName || null,
+                lastName || null
+            ]
+        );
+
+        const user = userResult.rows[0];
+
+        // --------------------------------
+        // Assign role
+        // --------------------------------
+
+        await pool.query(
+            `
+            INSERT INTO user_roles
+            (
+                user_id,
+                role_id
+            )
+            VALUES
+            (
+                $1,
+                $2
+            )
+            ON CONFLICT DO NOTHING
+            `,
+            [
+                user.id,
+                roleResult.rows[0].id
+            ]
+        );
+
+        // --------------------------------
+        // Audit
+        // --------------------------------
+
+        await logAudit({
+            userId: req.user.id,
+            action: "USER_CREATE",
+            resource: "USER",
+            resourceId: user.id,
+            result: "SUCCESS",
+            riskLevel: "MEDIUM",
+            ipAddress: req.ip,
+            userAgent: req.get("user-agent"),
+            metadata: {
+                username: user.username,
+                email: user.email,
+                role: normalizedRole
+            }
+        });
+
+        // --------------------------------
+        // Response
+        // --------------------------------
+
+        return res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            user: {
+                ...user,
+                role: normalizedRole
+            }
+        });
+
+    } catch (error) {
+        console.error(
+            "Create user error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to create user"
+        });
+    }
+};    try {
 
         const {
             username,
