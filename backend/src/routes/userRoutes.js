@@ -65,7 +65,7 @@ router.delete(
 
 
 // ASSIGN ROLE
-router.post(
+router.put(
     "/:userId/role",
     authenticate,
     authorize("ROLE_ASSIGN"),
