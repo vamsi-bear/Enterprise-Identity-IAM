@@ -48,14 +48,15 @@ export const assignRole = async (req, res) => {
     try {
 
         const { userId } = req.params;
-        const { role } = req.body;
-
+const normalizedRole = role
+    ? String(role).trim().toUpperCase()
+    : "";
 
         // --------------------------------------------
         // Validate role
         // --------------------------------------------
 
-        if (!role) {
+    if (!normalizedRole) {
 
             return res.status(400).json({
                 success: false,
@@ -108,8 +109,7 @@ export const assignRole = async (req, res) => {
             FROM roles
             WHERE name = $1
             `,
-            [role]
-        );
+[normalizedRole]        );
 
 
         if (roleResult.rows.length === 0) {
