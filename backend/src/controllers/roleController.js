@@ -1,218 +1,185 @@
-
 import pool from "../config/database.js";
 import { logAudit } from "../utils/auditLogger.js";
 
-// ============================================
+
+// ===============================
 // GET ALL ROLES
-// GET /api/roles
-// ============================================
-
+// ===============================
 export const getRoles = async (req, res) => {
-
     try {
+        const result = await pool.query(
+            `SELECT id, name
+             FROM roles
+             ORDER BY name`
+        );
 
-        const result = await pool.query(`
-            SELECT
-                id,
-                name
-            FROM roles
-            ORDER BY name
-        `);
-
-        return res.status(200).json({
+        res.json({
             success: true,
             roles: result.rows
         });
 
     } catch (error) {
-
         console.error("Get roles error:", error);
 
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: "Unable to fetch roles"
         });
-
     }
-
 };
 
 
-// ============================================
-// ASSIGN / REPLACE USER ROLE
-// POST /api/users/:userId/role
-// ============================================
-
+// ===============================
+// ASSIGN ROLE TO USER
+// ===============================
 export const assignRole = async (req, res) => {
 
     try {
 
         const { userId } = req.params;
-const normalizedRole = role
-    ? String(role).trim().toUpperCase()
-    : "";
 
-        // --------------------------------------------
-        // Validate role
-        // --------------------------------------------
+        // IMPORTANT: Get role from request body
+        const { role } = req.body;
 
-    if (!normalizedRole) {
+        console.log("Assign role request:", {
+            userId,
+            role,
+            body: req.body
+        });
 
+
+        // ===============================
+        // VALIDATE ROLE
+        // ===============================
+        if (!role) {
             return res.status(400).json({
                 success: false,
                 message: "Role is required"
             });
-
         }
 
 
-        // --------------------------------------------
-        // Check target user
-        // --------------------------------------------
+        // Normalize role
+        const normalizedRole = String(role)
+            .trim()
+            .toUpperCase();
 
+
+        const allowedRoles = [
+            "EMPLOYEE",
+            "DEVELOPER",
+            "ADMIN",
+            "SUPER_ADMIN"
+        ];
+
+
+        if (!allowedRoles.includes(normalizedRole)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role"
+            });
+        }
+
+
+        // ===============================
+        // CHECK USER
+        // ===============================
         const userResult = await pool.query(
-            `
-            SELECT
-                id,
-                username,
-                email
-            FROM users
-            WHERE id = $1
-            `,
+            `SELECT id, username, email
+             FROM users
+             WHERE id = $1`,
             [userId]
         );
 
 
         if (userResult.rows.length === 0) {
-
             return res.status(404).json({
                 success: false,
                 message: "User not found"
             });
-
         }
 
 
-        const targetUser =
-            userResult.rows[0];
-
-
-        // --------------------------------------------
-        // Check role
-        // --------------------------------------------
-
+        // ===============================
+        // CHECK ROLE
+        // ===============================
         const roleResult = await pool.query(
-            `
-            SELECT
-                id,
-                name
-            FROM roles
-            WHERE name = $1
-            `,
-[normalizedRole]        );
+            `SELECT id, name
+             FROM roles
+             WHERE UPPER(name) = $1`,
+            [normalizedRole]
+        );
 
 
         if (roleResult.rows.length === 0) {
-
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
-                message: "Role not found"
+                message: "Role does not exist"
             });
-
         }
 
 
-        const targetRole =
-            roleResult.rows[0];
+        const roleId = roleResult.rows[0].id;
+        const roleName = roleResult.rows[0].name;
 
 
-        // --------------------------------------------
-        // Replace existing role
-        // --------------------------------------------
-
+        // ===============================
+        // REMOVE EXISTING ROLES
+        // ===============================
         await pool.query(
-            `
-            DELETE FROM user_roles
-            WHERE user_id = $1
-            `,
+            `DELETE FROM user_roles
+             WHERE user_id = $1`,
             [userId]
         );
 
 
+        // ===============================
+        // ASSIGN NEW ROLE
+        // ===============================
         await pool.query(
-            `
-            INSERT INTO user_roles
-                (user_id, role_id)
-            VALUES
-                ($1, $2)
-            `,
-            [
-                userId,
-                targetRole.id
-            ]
+            `INSERT INTO user_roles (user_id, role_id)
+             VALUES ($1, $2)`,
+            [userId, roleId]
         );
 
 
-        // --------------------------------------------
-        // Audit log
-        // --------------------------------------------
+        // ===============================
+        // AUDIT LOG
+        // ===============================
+        try {
 
-        await logAudit({
+            await logAudit({
+                userId: req.user.id,
+                action: "ROLE_ASSIGN",
+                resource: "USER_ROLE",
+                result: "SUCCESS",
+                riskLevel: "HIGH",
+                details: {
+                    targetUserId: userId,
+                    assignedRole: roleName
+                }
+            });
 
-            userId: req.user.id,
+        } catch (auditError) {
 
-            action: "ROLE_ASSIGN",
+            console.error(
+                "Audit logging error:",
+                auditError
+            );
 
-            resource: "USER_ROLE",
-
-            resourceId: userId,
-
-            result: "SUCCESS",
-
-            riskLevel: "HIGH",
-
-            ipAddress: req.ip,
-
-            userAgent: req.get("user-agent"),
-
-            metadata: {
-
-                targetUsername:
-                    targetUser.username,
-
-                targetEmail:
-                    targetUser.email,
-
-                assignedRole:
-                    targetRole.name
-
-            }
-
-        });
+        }
 
 
-        // --------------------------------------------
-        // Response
-        // --------------------------------------------
-
+        // ===============================
+        // SUCCESS RESPONSE
+        // ===============================
         return res.status(200).json({
-
             success: true,
-
             message: "Role assigned successfully",
-
             user: {
-
-                id: targetUser.id,
-
-                username: targetUser.username,
-
-                email: targetUser.email,
-
-                role: targetRole.name
-
+                id: userId,
+                role: roleName
             }
-
         });
 
 
@@ -224,13 +191,8 @@ const normalizedRole = role
         );
 
         return res.status(500).json({
-
             success: false,
-
             message: "Unable to assign role"
-
         });
-
     }
-
 };
