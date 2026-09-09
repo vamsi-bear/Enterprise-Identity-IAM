@@ -4,6 +4,8 @@ import {
     setupMFA,
     verifyMFA,
     verifyLoginMFA,
+    verifyBackupCode,
+    generateBackupCodes,
     disableMFA
 } from "../controllers/mfaController.js";
 
@@ -12,7 +14,6 @@ import {
     authenticateMfa,
     authorize
 } from "../middleware/authMiddleware.js";
-
 
 const router = express.Router();
 
@@ -32,9 +33,6 @@ router.post(
 // ============================================================
 // MFA SETUP VERIFICATION
 // POST /api/mfa/verify
-//
-// This endpoint is used by an already authenticated user when
-// enabling MFA, so it requires the final authentication token.
 // ============================================================
 
 router.post(
@@ -43,16 +41,42 @@ router.post(
     verifyMFA
 );
 
+
+// ============================================================
 // MFA VERIFICATION DURING LOGIN
 // POST /api/mfa/verify-login
-//
-// This endpoint accepts the short-lived mfaToken issued after the
-// password check, not a final authenticated session token.
+// ============================================================
+
 router.post(
     "/verify-login",
     authenticateMfa,
     verifyLoginMFA
 );
+
+
+// ============================================================
+// BACKUP CODE VERIFICATION DURING LOGIN
+// POST /api/mfa/verify-backup
+// ============================================================
+
+router.post(
+    "/verify-backup",
+    authenticateMfa,
+    verifyBackupCode
+);
+
+
+// ============================================================
+// GENERATE NEW BACKUP CODES
+// POST /api/mfa/backup-codes
+// ============================================================
+
+router.post(
+    "/backup-codes",
+    authenticate,
+    generateBackupCodes
+);
+
 
 // ============================================================
 // MFA DISABLE

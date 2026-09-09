@@ -1,250 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureSphere IAM - MFA</title>
 
     <style>
-
         * {
             box-sizing: border-box;
         }
 
         body {
-
             margin: 0;
-
             min-height: 100vh;
-
             font-family: Arial, sans-serif;
-
             background: #eef2f7;
-
             display: flex;
-
             justify-content: center;
-
             align-items: center;
+            padding: 30px 15px;
         }
 
         .card {
-
-            width: 520px;
-
-            max-width: 92%;
-
+            width: 560px;
+            max-width: 95%;
             background: white;
-
             padding: 35px;
-
             border-radius: 16px;
-
-            box-shadow:
-                0 10px 35px
-                rgba(0, 0, 0, 0.12);
-
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
             text-align: center;
         }
 
         h1 {
-
             margin: 0 0 8px;
-
             color: #111827;
         }
 
         h2 {
-
             color: #1f3f70;
-
             margin-top: 25px;
         }
 
+        h3 {
+            color: #334155;
+        }
+
         p {
-
             color: #475569;
-
             line-height: 1.5;
         }
 
         .message {
-
             padding: 13px;
-
             margin: 20px 0;
-
             border-radius: 8px;
-
             background: #f1f5f9;
-
             color: #334155;
-
             font-weight: bold;
         }
 
         .success {
-
             background: #dcfce7;
-
             color: #166534;
         }
 
         .error {
-
             background: #fee2e2;
-
             color: #991b1b;
         }
 
         .warning {
-
             background: #fef3c7;
-
             color: #92400e;
         }
 
         .section {
-
             display: none;
-
             margin-top: 25px;
         }
 
         .section.active {
-
             display: block;
         }
 
         button {
-
             border: none;
-
             border-radius: 8px;
-
             padding: 13px 25px;
-
             background: #2563eb;
-
             color: white;
-
             font-size: 16px;
-
             font-weight: bold;
-
             cursor: pointer;
-
             margin: 8px;
         }
 
         button:hover {
-
             background: #1d4ed8;
         }
 
         button:disabled {
-
             background: #94a3b8;
-
             cursor: not-allowed;
         }
 
+        .secondary {
+            background: #475569;
+        }
+
+        .secondary:hover {
+            background: #334155;
+        }
+
+        .success-button {
+            background: #16a34a;
+        }
+
+        .success-button:hover {
+            background: #15803d;
+        }
+
         .logout {
-
             background: #dc2626;
-
             margin-top: 25px;
         }
 
         .logout:hover {
-
             background: #b91c1c;
         }
 
         #setupQrCode {
-
             width: 260px;
-
             height: 260px;
-
             object-fit: contain;
-
             display: block;
-
             margin: 20px auto;
-
             padding: 10px;
-
             border: 1px solid #d1d5db;
-
             border-radius: 10px;
-
             background: white;
         }
 
         .secret {
-
             background: #f8fafc;
-
             border: 1px solid #e2e8f0;
-
             padding: 12px;
-
             border-radius: 8px;
-
             word-break: break-all;
-
             font-family: monospace;
-
             font-size: 14px;
-
             margin: 15px 0;
         }
 
         input {
-
             width: 300px;
-
             max-width: 90%;
-
             padding: 14px;
-
             border: 1px solid #cbd5e1;
-
             border-radius: 8px;
-
             font-size: 22px;
-
             text-align: center;
-
             letter-spacing: 7px;
-
             margin: 15px 0;
         }
 
         input:focus {
-
             outline: none;
-
             border-color: #2563eb;
         }
 
+        .backup-input {
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: monospace;
+        }
+
         .small {
-
             font-size: 13px;
-
             color: #64748b;
         }
 
-    </style>
+        .backup-panel {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
 
+        .backup-warning {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 14px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .backup-codes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .backup-code {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .method-buttons {
+            margin: 15px 0;
+        }
+
+        .method-buttons button {
+            font-size: 14px;
+            padding: 10px 15px;
+        }
+
+        .active-method {
+            background: #1d4ed8;
+        }
+
+        .remaining {
+            margin-top: 12px;
+            font-weight: bold;
+            color: #1e40af;
+        }
+
+        @media (max-width: 500px) {
+            .card {
+                padding: 25px 18px;
+            }
+
+            .backup-codes {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                width: 90%;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -252,79 +266,50 @@
 <div class="card">
 
     <h1>SecureSphere IAM</h1>
-
     <p>Multi-Factor Authentication</p>
 
-
-    <!-- =====================================================
-         GLOBAL MESSAGE
-    ====================================================== -->
-
-    <div
-        id="message"
-        class="message"
-    >
+    <div id="message" class="message">
         Checking authentication...
     </div>
 
+    <!-- ================= MFA SETUP ================= -->
 
-    <!-- =====================================================
-         MFA SETUP SECTION
-    ====================================================== -->
-
-    <div
-        id="setupSection"
-        class="section"
-    >
+    <div id="setupSection" class="section">
 
         <h2>Enable MFA</h2>
 
         <p>
-            Protect your SecureSphere IAM account
-            using Google Authenticator or
-            Microsoft Authenticator.
+            Protect your SecureSphere IAM account using
+            Google Authenticator or Microsoft Authenticator.
         </p>
 
-        <button
-            id="setupButton"
-            onclick="setupMFA()"
-        >
+        <button id="setupButton" onclick="setupMFA()">
             Generate MFA QR Code
         </button>
-
 
         <div id="qrSection" style="display:none;">
 
             <h3>Scan QR Code</h3>
 
             <p>
-                Open Google Authenticator or
-                Microsoft Authenticator and scan
-                the QR code below.
+                Open Google Authenticator or Microsoft Authenticator
+                and scan the QR code below.
             </p>
 
-            <img
-                id="setupQrCode"
-                alt="MFA QR Code"
-            >
-
+            <img id="setupQrCode" alt="MFA QR Code">
 
             <p>
                 If you cannot scan the QR code,
                 manually enter this secret:
             </p>
 
-            <div
-                id="secret"
-                class="secret"
-            ></div>
-
+            <div id="secret" class="secret"></div>
 
             <h3>Verify MFA</h3>
 
             <p>
-                Enter the 6-digit code generated
-                by your authenticator application.
+                Enter the 6-digit code generated by your
+                authenticator application.
             </p>
 
             <input
@@ -346,146 +331,211 @@
             </button>
 
         </div>
-
     </div>
 
+    <!-- ================= BACKUP CODES ================= -->
 
-    <!-- =====================================================
-         MFA LOGIN SECTION
-    ====================================================== -->
+    <div id="backupSection" class="section">
 
-    <div
-        id="loginSection"
-        class="section"
-    >
+        <h2>🔑 MFA Backup Codes</h2>
+
+        <p>
+            Backup codes allow you to access your account
+            if you cannot use your authenticator application.
+        </p>
+
+        <div class="backup-warning">
+            ⚠️ Each backup code can only be used once.
+            <br><br>
+            Generating new codes invalidates your previous
+            backup codes.
+        </div>
+
+        <button
+            id="generateBackupButton"
+            class="success-button"
+            onclick="generateBackupCodes()"
+        >
+            🔑 Generate Backup Codes
+        </button>
+
+        <div id="backupResult" class="backup-panel hidden">
+
+            <h3>Save Your Backup Codes</h3>
+
+            <p>
+                These codes are shown only after generation.
+                Save them somewhere secure.
+            </p>
+
+            <div id="backupCodes" class="backup-codes"></div>
+
+            <div class="button-row">
+
+                <button
+                    onclick="copyBackupCodes()"
+                    class="secondary"
+                >
+                    📋 Copy Codes
+                </button>
+
+                <button
+                    onclick="downloadBackupCodes()"
+                    class="secondary"
+                >
+                    💾 Download Codes
+                </button>
+
+            </div>
+
+            <p id="backupRemaining" class="remaining"></p>
+
+        </div>
+    </div>
+
+    <!-- ================= MFA LOGIN ================= -->
+
+    <div id="loginSection" class="section">
 
         <h2>Verify Your Identity</h2>
 
-        <p>
-            Enter the 6-digit code from
-            Google Authenticator or
-            Microsoft Authenticator.
+        <p id="loginDescription">
+            Enter the 6-digit code from Google Authenticator
+            or Microsoft Authenticator.
         </p>
 
-        <input
-            type="text"
-            id="loginCode"
-            maxlength="6"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            placeholder="000000"
-        >
+        <div class="method-buttons">
 
-        <br>
+            <button
+                id="authenticatorMethodButton"
+                class="active-method"
+                onclick="showAuthenticatorLogin()"
+            >
+                📱 Authenticator Code
+            </button>
 
-        <button
-            id="loginVerifyButton"
-            onclick="verifyLoginMFA()"
-        >
-            Verify MFA
-        </button>
+            <button
+                id="backupMethodButton"
+                class="secondary"
+                onclick="showBackupLogin()"
+            >
+                🔑 Backup Code
+            </button>
+
+        </div>
+
+        <!-- AUTHENTICATOR LOGIN -->
+
+        <div id="authenticatorLogin">
+
+            <input
+                type="text"
+                id="loginCode"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                placeholder="000000"
+            >
+
+            <br>
+
+            <button
+                id="loginVerifyButton"
+                onclick="verifyLoginMFA()"
+            >
+                Verify MFA
+            </button>
+
+        </div>
+
+        <!-- BACKUP LOGIN -->
+
+        <div id="backupLogin" class="hidden">
+
+            <p>
+                Enter one of your unused backup codes.
+            </p>
+
+            <input
+                type="text"
+                id="backupLoginCode"
+                class="backup-input"
+                maxlength="32"
+                placeholder="XXXXXXXXXX"
+                autocomplete="off"
+            >
+
+            <br>
+
+            <button
+                id="backupLoginButton"
+                onclick="verifyBackupCode()"
+            >
+                Verify Backup Code
+            </button>
+
+        </div>
 
         <p class="small">
-            Your temporary MFA login session will
-            be converted into a normal authenticated
-            session after successful verification.
+            Your temporary MFA login session will be converted
+            into a normal authenticated session after successful verification.
         </p>
 
     </div>
 
+    <!-- ================= LOGOUT ================= -->
 
-    <!-- =====================================================
-         LOGOUT
-    ====================================================== -->
-
-    <button
-        class="logout"
-        onclick="logout()"
-    >
+    <button class="logout" onclick="logout()">
         Logout
     </button>
 
 </div>
 
-
 <script>
 
 const API_URL = "https://enterprise-identity-iam.onrender.com";
 
-// ============================================================
-// DOM ELEMENTS
-// ============================================================
+/* ============================================================
+   DOM ELEMENTS
+============================================================ */
 
-const message =
-    document.getElementById("message");
+const message = document.getElementById("message");
+const setupSection = document.getElementById("setupSection");
+const loginSection = document.getElementById("loginSection");
+const backupSection = document.getElementById("backupSection");
 
-const setupSection =
-    document.getElementById("setupSection");
+const qrSection = document.getElementById("qrSection");
+const setupQrCode = document.getElementById("setupQrCode");
+const secretElement = document.getElementById("secret");
 
-const loginSection =
-    document.getElementById("loginSection");
+/* ============================================================
+   MESSAGE
+============================================================ */
 
-const qrSection =
-    document.getElementById("qrSection");
-
-const setupQrCode =
-    document.getElementById("setupQrCode");
-
-const secretElement =
-    document.getElementById("secret");
-
-
-// ============================================================
-// MESSAGE HELPER
-// ============================================================
-
-function showMessage(
-    text,
-    type = ""
-) {
+function showMessage(text, type = "") {
 
     message.textContent = text;
-
-    message.className =
-        "message " + type;
+    message.className = "message " + type;
 }
 
-
-// ============================================================
-// INITIALIZE MFA PAGE
-// ============================================================
+/* ============================================================
+   INITIALIZE
+============================================================ */
 
 function initializeMFA() {
 
-    const finalToken =
-        localStorage.getItem("token");
+    const finalToken = localStorage.getItem("token");
+    const mfaToken = localStorage.getItem("mfaToken");
 
-    const mfaToken =
-        localStorage.getItem("mfaToken");
+    console.log("Final JWT exists:", !!finalToken);
+    console.log("MFA token exists:", !!mfaToken);
 
-    console.log(
-        "Final JWT exists:",
-        !!finalToken
-    );
-
-    console.log(
-        "MFA token exists:",
-        !!mfaToken
-    );
-
-
-    // ========================================================
-    // CASE 1:
-    // LOGIN MFA
-    // ========================================================
+    /* MFA LOGIN */
 
     if (mfaToken) {
 
-        console.log(
-            "MFA login session found."
-        );
-
         setupSection.classList.remove("active");
+        backupSection.classList.remove("active");
 
         loginSection.classList.add("active");
 
@@ -497,40 +547,24 @@ function initializeMFA() {
         return;
     }
 
-
-    // ========================================================
-    // CASE 2:
-    // NORMAL AUTHENTICATED USER
-    // MFA SETUP
-    // ========================================================
+    /* NORMAL LOGIN */
 
     if (finalToken) {
-
-        console.log(
-            "Authenticated user found."
-        );
 
         loginSection.classList.remove("active");
 
         setupSection.classList.add("active");
+        backupSection.classList.add("active");
 
         showMessage(
-            "You are logged in. Enable MFA for your account.",
-            ""
+            "You are logged in. Manage your MFA settings below.",
+            "success"
         );
 
         return;
     }
 
-
-    // ========================================================
-    // CASE 3:
-    // NO AUTHENTICATION
-    // ========================================================
-
-    console.log(
-        "No authentication token found."
-    );
+    /* NOT LOGGED IN */
 
     showMessage(
         "Please login first.",
@@ -538,23 +572,17 @@ function initializeMFA() {
     );
 
     setTimeout(() => {
-
-        window.location.href =
-            "login.html";
-
+        window.location.href = "login.html";
     }, 1200);
 }
 
-
-// ============================================================
-// MFA SETUP
-// ============================================================
+/* ============================================================
+   MFA SETUP
+============================================================ */
 
 async function setupMFA() {
 
-    const token =
-        localStorage.getItem("token");
-
+    const token = localStorage.getItem("token");
 
     if (!token) {
 
@@ -566,49 +594,35 @@ async function setupMFA() {
         return;
     }
 
-
     const button =
         document.getElementById("setupButton");
 
     button.disabled = true;
-
-    button.textContent =
-        "Generating QR Code...";
-
+    button.textContent = "Generating QR Code...";
 
     try {
 
-        const response =
-            await fetch(
-                `${API_URL}/api/mfa/setup`,
-                {
-                    method: "POST",
-
-                    headers: {
-
-                        "Authorization":
-                            `Bearer ${token}`
-
-                    }
+        const response = await fetch(
+            `${API_URL}/api/mfa/setup`,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
                 }
-            );
-
+            }
+        );
 
         console.log(
-            "MFA setup HTTP status:",
+            "MFA setup status:",
             response.status
         );
 
-
-        const data =
-            await response.json();
-
+        const data = await response.json();
 
         console.log(
             "MFA setup response:",
             data
         );
-
 
         if (!response.ok || !data.success) {
 
@@ -621,11 +635,6 @@ async function setupMFA() {
             return;
         }
 
-
-        // ====================================================
-        // DISPLAY QR CODE
-        // ====================================================
-
         if (!data.qrCode) {
 
             showMessage(
@@ -636,26 +645,19 @@ async function setupMFA() {
             return;
         }
 
-
-        setupQrCode.src =
-            data.qrCode;
-
+        setupQrCode.src = data.qrCode;
 
         secretElement.textContent =
             data.secret || "Secret unavailable";
 
-
-        qrSection.style.display =
-            "block";
-
+        qrSection.style.display = "block";
 
         showMessage(
             "QR code generated. Scan it with your authenticator app.",
             "success"
         );
 
-    }
-    catch (error) {
+    } catch (error) {
 
         console.error(
             "MFA setup error:",
@@ -667,33 +669,25 @@ async function setupMFA() {
             "error"
         );
 
-    }
-    finally {
+    } finally {
 
         button.disabled = false;
-
-        button.textContent =
-            "Generate MFA QR Code";
+        button.textContent = "Generate MFA QR Code";
     }
 }
 
-
-// ============================================================
-// VERIFY MFA SETUP
-// ============================================================
+/* ============================================================
+   VERIFY MFA SETUP
+============================================================ */
 
 async function verifySetupMFA() {
 
-    const token =
-        localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-
-    const code =
-        document
-            .getElementById("setupCode")
-            .value
-            .trim();
-
+    const code = document
+        .getElementById("setupCode")
+        .value
+        .trim();
 
     if (!token) {
 
@@ -705,7 +699,6 @@ async function verifySetupMFA() {
         return;
     }
 
-
     if (!/^\d{6}$/.test(code)) {
 
         showMessage(
@@ -716,61 +709,34 @@ async function verifySetupMFA() {
         return;
     }
 
-
     const button =
-        document.getElementById(
-            "setupVerifyButton"
-        );
-
+        document.getElementById("setupVerifyButton");
 
     button.disabled = true;
-
-    button.textContent =
-        "Verifying...";
-
+    button.textContent = "Verifying...";
 
     try {
 
-        const response =
-            await fetch(
-                `${API_URL}/api/mfa/verify`,
-                {
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            `Bearer ${token}`
-
-                    },
-
-                    body: JSON.stringify({
-
-                        token: code
-
-                    })
-                }
-            );
-
-
-        console.log(
-            "MFA setup verification status:",
-            response.status
+        const response = await fetch(
+            `${API_URL}/api/mfa/verify`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    token: code
+                })
+            }
         );
 
-
-        const data =
-            await response.json();
-
+        const data = await response.json();
 
         console.log(
-            "MFA setup verification response:",
+            "MFA verification response:",
             data
         );
-
 
         if (!response.ok || !data.success) {
 
@@ -783,33 +749,25 @@ async function verifySetupMFA() {
             return;
         }
 
+        document.getElementById("setupCode").value = "";
 
-        document
-            .getElementById("setupCode")
-            .value = "";
+        qrSection.style.display = "none";
 
+        document.getElementById(
+            "setupButton"
+        ).style.display = "none";
+
+        backupSection.classList.add("active");
 
         showMessage(
-            "✅ MFA enabled successfully!",
+            "✅ MFA enabled successfully! You can now generate backup codes.",
             "success"
         );
 
-
-        qrSection.style.display =
-            "none";
-
-
-        document
-            .getElementById("setupButton")
-            .style.display =
-            "none";
-
-
-    }
-    catch (error) {
+    } catch (error) {
 
         console.error(
-            "MFA setup verification error:",
+            "MFA verification error:",
             error
         );
 
@@ -818,32 +776,311 @@ async function verifySetupMFA() {
             "error"
         );
 
-    }
-    finally {
+    } finally {
 
         button.disabled = false;
-
-        button.textContent =
-            "Verify & Enable MFA";
+        button.textContent = "Verify & Enable MFA";
     }
 }
 
+/* ============================================================
+   GENERATE BACKUP CODES
+============================================================ */
 
-// ============================================================
-// VERIFY LOGIN MFA
-// ============================================================
+async function generateBackupCodes() {
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+
+        showMessage(
+            "Please login first.",
+            "error"
+        );
+
+        return;
+    }
+
+    const button =
+        document.getElementById("generateBackupButton");
+
+    button.disabled = true;
+    button.textContent = "Generating...";
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/api/mfa/backup-codes`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(
+            "Backup code response:",
+            data
+        );
+
+        if (!response.ok || !data.success) {
+
+            showMessage(
+                data.message ||
+                "Unable to generate backup codes.",
+                "error"
+            );
+
+            return;
+        }
+
+        const codes = data.backupCodes || [];
+
+        if (codes.length === 0) {
+
+            showMessage(
+                "Backend did not return backup codes.",
+                "error"
+            );
+
+            return;
+        }
+
+        displayBackupCodes(codes);
+
+        showMessage(
+            "✅ Backup codes generated successfully. Save them securely.",
+            "success"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Backup code generation error:",
+            error
+        );
+
+        showMessage(
+            "Unable to connect to the backend.",
+            "error"
+        );
+
+    } finally {
+
+        button.disabled = false;
+        button.textContent = "🔑 Generate Backup Codes";
+    }
+}
+
+/* ============================================================
+   DISPLAY BACKUP CODES
+============================================================ */
+
+function displayBackupCodes(codes) {
+
+    const container =
+        document.getElementById("backupCodes");
+
+    container.innerHTML = "";
+
+    codes.forEach(code => {
+
+        const element =
+            document.createElement("div");
+
+        element.className = "backup-code";
+        element.textContent = code;
+
+        container.appendChild(element);
+    });
+
+    document.getElementById(
+        "backupResult"
+    ).classList.remove("hidden");
+
+    document.getElementById(
+        "backupRemaining"
+    ).textContent =
+        `${codes.length} new backup codes generated.`;
+}
+
+/* ============================================================
+   COPY BACKUP CODES
+============================================================ */
+
+async function copyBackupCodes() {
+
+    const codes = Array.from(
+        document.querySelectorAll(".backup-code")
+    ).map(element => element.textContent);
+
+    if (codes.length === 0) {
+
+        showMessage(
+            "No backup codes available.",
+            "error"
+        );
+
+        return;
+    }
+
+    try {
+
+        await navigator.clipboard.writeText(
+            codes.join("\n")
+        );
+
+        showMessage(
+            "📋 Backup codes copied to clipboard.",
+            "success"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Copy error:",
+            error
+        );
+
+        showMessage(
+            "Unable to copy backup codes.",
+            "error"
+        );
+    }
+}
+
+/* ============================================================
+   DOWNLOAD BACKUP CODES
+============================================================ */
+
+function downloadBackupCodes() {
+
+    const codes = Array.from(
+        document.querySelectorAll(".backup-code")
+    ).map(element => element.textContent);
+
+    if (codes.length === 0) {
+
+        showMessage(
+            "No backup codes available.",
+            "error"
+        );
+
+        return;
+    }
+
+    const content =
+`SecureSphere IAM
+MFA Backup Codes
+===========================
+
+Keep these codes in a secure location.
+Each code can be used only once.
+
+${codes.join("\n")}
+
+===========================
+`;
+
+    const blob = new Blob(
+        [content],
+        {
+            type: "text/plain"
+        }
+    );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const link =
+        document.createElement("a");
+
+    link.href = url;
+    link.download =
+        "SecureSphere-MFA-Backup-Codes.txt";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+    showMessage(
+        "💾 Backup codes downloaded.",
+        "success"
+    );
+}
+
+/* ============================================================
+   AUTHENTICATOR LOGIN
+============================================================ */
+
+function showAuthenticatorLogin() {
+
+    document.getElementById(
+        "authenticatorLogin"
+    ).classList.remove("hidden");
+
+    document.getElementById(
+        "backupLogin"
+    ).classList.add("hidden");
+
+    document.getElementById(
+        "authenticatorMethodButton"
+    ).classList.add("active-method");
+
+    document.getElementById(
+        "backupMethodButton"
+    ).classList.remove("active-method");
+
+    document.getElementById(
+        "loginDescription"
+    ).textContent =
+        "Enter the 6-digit code from Google Authenticator or Microsoft Authenticator.";
+}
+
+/* ============================================================
+   BACKUP LOGIN
+============================================================ */
+
+function showBackupLogin() {
+
+    document.getElementById(
+        "authenticatorLogin"
+    ).classList.add("hidden");
+
+    document.getElementById(
+        "backupLogin"
+    ).classList.remove("hidden");
+
+    document.getElementById(
+        "authenticatorMethodButton"
+    ).classList.remove("active-method");
+
+    document.getElementById(
+        "backupMethodButton"
+    ).classList.add("active-method");
+
+    document.getElementById(
+        "loginDescription"
+    ).textContent =
+        "Enter one of your unused MFA backup codes.";
+}
+
+/* ============================================================
+   VERIFY AUTHENTICATOR LOGIN
+============================================================ */
 
 async function verifyLoginMFA() {
 
     const mfaToken =
         localStorage.getItem("mfaToken");
-
-
-    console.log(
-        "MFA token exists:",
-        !!mfaToken
-    );
-
 
     if (!mfaToken) {
 
@@ -855,13 +1092,10 @@ async function verifyLoginMFA() {
         return;
     }
 
-
-    const code =
-        document
-            .getElementById("loginCode")
-            .value
-            .trim();
-
+    const code = document
+        .getElementById("loginCode")
+        .value
+        .trim();
 
     if (!/^\d{6}$/.test(code)) {
 
@@ -873,69 +1107,34 @@ async function verifyLoginMFA() {
         return;
     }
 
-
     const button =
-        document.getElementById(
-            "loginVerifyButton"
-        );
-
+        document.getElementById("loginVerifyButton");
 
     button.disabled = true;
-
-    button.textContent =
-        "Verifying...";
-
+    button.textContent = "Verifying...";
 
     try {
 
-        const response =
-            await fetch(
-                `${API_URL}/api/mfa/verify-login`,
-                {
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        // IMPORTANT:
-                        // Use mfaToken here,
-                        // NOT token.
-
-                        "Authorization":
-                            `Bearer ${mfaToken}`
-
-                    },
-
-                    body: JSON.stringify({
-
-                        token: code
-
-                    })
-                }
-            );
-
-
-        console.log(
-            "MFA login verification HTTP status:",
-            response.status
+        const response = await fetch(
+            `${API_URL}/api/mfa/verify-login`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${mfaToken}`
+                },
+                body: JSON.stringify({
+                    token: code
+                })
+            }
         );
 
-
-        const data =
-            await response.json();
-
+        const data = await response.json();
 
         console.log(
-            "MFA login verification response:",
+            "MFA login response:",
             data
         );
-
-
-        // ====================================================
-        // MFA SUCCESS + FINAL JWT
-        // ====================================================
 
         if (
             response.ok &&
@@ -943,20 +1142,11 @@ async function verifyLoginMFA() {
             data.token
         ) {
 
-            console.log(
-                "Final JWT received:",
-                true
-            );
-
-
-            // Save FINAL JWT
             localStorage.setItem(
                 "token",
                 data.token
             );
 
-
-            // Save user if backend returned it
             if (data.user) {
 
                 localStorage.setItem(
@@ -965,69 +1155,20 @@ async function verifyLoginMFA() {
                 );
             }
 
-
-            // Remove temporary MFA session
-            localStorage.removeItem(
-                "mfaToken"
-            );
-
-            localStorage.removeItem(
-                "mfaEmail"
-            );
-
-
-            console.log(
-                "Final JWT exists:",
-                !!localStorage.getItem("token")
-            );
-
+            localStorage.removeItem("mfaToken");
+            localStorage.removeItem("mfaEmail");
 
             showMessage(
                 "✅ MFA verification successful. Redirecting...",
                 "success"
             );
 
-
             setTimeout(() => {
-
-                window.location.href =
-                    "dashboard.html";
-
+                window.location.href = "dashboard.html";
             }, 700);
 
-
             return;
         }
-
-
-        // ====================================================
-        // SUCCESS BUT NO JWT
-        // ====================================================
-
-        if (
-            response.ok &&
-            data.success &&
-            !data.token
-        ) {
-
-            console.error(
-                "Backend verified MFA but did not return final JWT.",
-                data
-            );
-
-
-            showMessage(
-                "MFA verified, but the backend did not return a final JWT.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        // ====================================================
-        // MFA FAILED
-        // ====================================================
 
         showMessage(
             data.message ||
@@ -1035,11 +1176,10 @@ async function verifyLoginMFA() {
             "error"
         );
 
-    }
-    catch (error) {
+    } catch (error) {
 
         console.error(
-            "MFA login verification error:",
+            "MFA login error:",
             error
         );
 
@@ -1048,45 +1188,162 @@ async function verifyLoginMFA() {
             "error"
         );
 
-    }
-    finally {
+    } finally {
 
         button.disabled = false;
-
-        button.textContent =
-            "Verify MFA";
+        button.textContent = "Verify MFA";
     }
 }
 
+/* ============================================================
+   VERIFY BACKUP CODE LOGIN
+============================================================ */
 
-// ============================================================
-// LOGOUT
-// ============================================================
+async function verifyBackupCode() {
+
+    const mfaToken =
+        localStorage.getItem("mfaToken");
+
+    if (!mfaToken) {
+
+        showMessage(
+            "MFA login session expired. Please login again.",
+            "error"
+        );
+
+        return;
+    }
+
+    const code = document
+        .getElementById("backupLoginCode")
+        .value
+        .trim()
+        .toUpperCase();
+
+    if (!code) {
+
+        showMessage(
+            "Enter a backup code.",
+            "error"
+        );
+
+        return;
+    }
+
+    const button =
+        document.getElementById("backupLoginButton");
+
+    button.disabled = true;
+    button.textContent = "Verifying...";
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/api/mfa/verify-backup`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${mfaToken}`
+                },
+                body: JSON.stringify({
+                    code: code
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(
+            "Backup login response:",
+            data
+        );
+
+        if (
+            response.ok &&
+            data.success &&
+            data.token
+        ) {
+
+            localStorage.setItem(
+                "token",
+                data.token
+            );
+
+            if (data.user) {
+
+                localStorage.setItem(
+                    "user",
+                    JSON.stringify(data.user)
+                );
+            }
+
+            localStorage.removeItem("mfaToken");
+            localStorage.removeItem("mfaEmail");
+
+            showMessage(
+                "✅ Backup code verified. Redirecting...",
+                "success"
+            );
+
+            console.log(
+                "Remaining backup codes:",
+                data.remainingBackupCodes
+            );
+
+            setTimeout(() => {
+                window.location.href = "dashboard.html";
+            }, 700);
+
+            return;
+        }
+
+        showMessage(
+            data.message ||
+            "Invalid or already used backup code.",
+            "error"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Backup code verification error:",
+            error
+        );
+
+        showMessage(
+            "Unable to connect to the backend.",
+            "error"
+        );
+
+    } finally {
+
+        button.disabled = false;
+        button.textContent = "Verify Backup Code";
+    }
+}
+
+/* ============================================================
+   LOGOUT
+============================================================ */
 
 function logout() {
 
     localStorage.removeItem("token");
-
     localStorage.removeItem("user");
-
     localStorage.removeItem("mfaToken");
-
     localStorage.removeItem("mfaEmail");
 
-
-    window.location.href =
-        "login.html";
+    window.location.href = "login.html";
 }
 
-
-// ============================================================
-// START
-// ============================================================
+/* ============================================================
+   START
+============================================================ */
 
 initializeMFA();
 
 </script>
 
 </body>
-
 </html>

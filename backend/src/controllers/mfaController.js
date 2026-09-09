@@ -1,7 +1,7 @@
-
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 import pool from "../config/database.js";
 import { logAudit } from "../utils/auditLogger.js";
@@ -16,7 +16,6 @@ export const setupMFA = async (req, res) => {
     try {
 
         const userId = req.user.id;
-
 
         if (!userId) {
             return res.status(401).json({
@@ -77,8 +76,8 @@ export const setupMFA = async (req, res) => {
             ]
         );
 
-        // A newly generated secret is pending until the user proves that
-        // their authenticator app can generate a valid TOTP code for it.
+
+        // Newly generated MFA secret must be verified first
         await pool.query(
             `
             UPDATE users
@@ -96,7 +95,6 @@ export const setupMFA = async (req, res) => {
         const qrCode = await QRCode.toDataURL(
             generatedSecret.otpauth_url
         );
-
 
         console.log("✅ MFA QR code generated");
 
@@ -120,10 +118,6 @@ export const setupMFA = async (req, res) => {
         });
 
 
-        // ------------------------------------------------------
-        // Return QR code
-        // ------------------------------------------------------
-
         return res.status(200).json({
 
             success: true,
@@ -132,28 +126,24 @@ export const setupMFA = async (req, res) => {
 
             qrCode,
 
-            // Useful for manual setup if QR scanning fails
+            // Manual setup fallback
             secret
-
         });
 
 
     } catch (error) {
 
-        console.error("❌ MFA setup error:", error);
+        console.error(
+            "❌ MFA setup error:",
+            error
+        );
 
         return res.status(500).json({
-
             success: false,
-
             message: "Unable to setup MFA"
-
         });
-
     }
-
 };
-
 
 
 // ============================================================
@@ -172,28 +162,10 @@ export const verifyMFA = async (req, res) => {
         if (!userId) {
 
             return res.status(401).json({
-
                 success: false,
-
                 message: "User authentication required"
-
             });
-
         }
-
-
-        console.log("🔐 MFA verification started:", {
-
-            userId,
-
-            email: req.user.email,
-
-            codeLength:
-                mfaCode
-                    ? String(mfaCode).length
-                    : 0
-
-        });
 
 
         // ------------------------------------------------------
@@ -206,13 +178,9 @@ export const verifyMFA = async (req, res) => {
         ) {
 
             return res.status(400).json({
-
                 success: false,
-
                 message: "MFA code must contain exactly 6 digits"
-
             });
-
         }
 
 
@@ -237,13 +205,9 @@ export const verifyMFA = async (req, res) => {
         if (result.rows.length === 0) {
 
             return res.status(404).json({
-
                 success: false,
-
                 message: "MFA is not configured"
-
             });
-
         }
 
 
@@ -272,11 +236,13 @@ export const verifyMFA = async (req, res) => {
                 Number(mfa.period) || 30,
 
             window: 1
-
         });
 
 
-        console.log("🔐 TOTP verification:", verified);
+        console.log(
+            "🔐 TOTP verification:",
+            verified
+        );
 
 
         if (!verified) {
@@ -300,24 +266,16 @@ export const verifyMFA = async (req, res) => {
                 userAgent: req.get("user-agent"),
 
                 metadata: {
-
                     email: req.user.email,
-
                     reason: "INVALID_TOTP"
-
                 }
-
             });
 
 
             return res.status(401).json({
-
                 success: false,
-
                 message: "Invalid MFA code"
-
             });
-
         }
 
 
@@ -334,6 +292,11 @@ export const verifyMFA = async (req, res) => {
             [userId]
         );
 
+
+        // ------------------------------------------------------
+        // Enable MFA
+        // ------------------------------------------------------
+
         await pool.query(
             `
             UPDATE users
@@ -345,7 +308,7 @@ export const verifyMFA = async (req, res) => {
 
 
         // ------------------------------------------------------
-        // Audit successful verification
+        // Audit success
         // ------------------------------------------------------
 
         await logAudit({
@@ -367,11 +330,8 @@ export const verifyMFA = async (req, res) => {
             userAgent: req.get("user-agent"),
 
             metadata: {
-
                 email: req.user.email
-
             }
-
         });
 
 
@@ -380,7 +340,6 @@ export const verifyMFA = async (req, res) => {
             success: true,
 
             message: "MFA verification successful"
-
         });
 
 
@@ -392,23 +351,16 @@ export const verifyMFA = async (req, res) => {
         );
 
         return res.status(500).json({
-
             success: false,
-
             message: "Unable to verify MFA"
-
         });
-
     }
-
 };
-
 
 
 // ============================================================
 // VERIFY MFA DURING LOGIN
-//
-// Uses temporary mfaToken
+// Uses temporary MFA JWT
 // Generates FINAL JWT
 // ============================================================
 
@@ -426,35 +378,24 @@ export const verifyLoginMFA = async (req, res) => {
         const authHeader =
             req.headers.authorization;
 
-
         if (
             !authHeader ||
             !authHeader.startsWith("Bearer ")
         ) {
 
             return res.status(401).json({
-
                 success: false,
-
                 message: "MFA login token is required"
-
             });
-
         }
 
 
         const mfaToken =
-            authHeader.split(" ")[1];
-
-
-        console.log(
-            "🔐 MFA login token received:",
-            !!mfaToken
-        );
+            authHeader.substring(7).trim();
 
 
         // ------------------------------------------------------
-        // Verify temporary MFA JWT
+        // Verify temporary JWT
         // ------------------------------------------------------
 
         let decoded;
@@ -474,20 +415,23 @@ export const verifyLoginMFA = async (req, res) => {
             );
 
             return res.status(401).json({
-
                 success: false,
-
                 message: "Invalid or expired MFA login token"
-
             });
-
         }
 
 
-        console.log(
-            "🔐 MFA token decoded:",
-            decoded
-        );
+        // ------------------------------------------------------
+        // Make sure this is actually an MFA pending token
+        // ------------------------------------------------------
+
+        if (decoded.mfaPending !== true) {
+
+            return res.status(401).json({
+                success: false,
+                message: "Invalid MFA session"
+            });
+        }
 
 
         // ------------------------------------------------------
@@ -503,13 +447,9 @@ export const verifyLoginMFA = async (req, res) => {
         if (!userId) {
 
             return res.status(401).json({
-
                 success: false,
-
                 message: "Invalid MFA token: user ID missing"
-
             });
-
         }
 
 
@@ -523,13 +463,9 @@ export const verifyLoginMFA = async (req, res) => {
         ) {
 
             return res.status(400).json({
-
                 success: false,
-
                 message: "MFA code must contain exactly 6 digits"
-
             });
-
         }
 
 
@@ -554,13 +490,9 @@ export const verifyLoginMFA = async (req, res) => {
         if (mfaResult.rows.length === 0) {
 
             return res.status(404).json({
-
                 success: false,
-
                 message: "MFA is not configured"
-
             });
-
         }
 
 
@@ -569,7 +501,7 @@ export const verifyLoginMFA = async (req, res) => {
 
 
         // ------------------------------------------------------
-        // Verify TOTP code
+        // Verify TOTP
         // ------------------------------------------------------
 
         const verified =
@@ -594,7 +526,6 @@ export const verifyLoginMFA = async (req, res) => {
                     Number(mfa.period) || 30,
 
                 window: 1
-
             });
 
 
@@ -625,26 +556,16 @@ export const verifyLoginMFA = async (req, res) => {
                 userAgent: req.get("user-agent"),
 
                 metadata: {
-
-                    email:
-                        decoded.email,
-
-                    reason:
-                        "INVALID_TOTP"
-
+                    email: decoded.email,
+                    reason: "INVALID_TOTP"
                 }
-
             });
 
 
             return res.status(401).json({
-
                 success: false,
-
                 message: "Invalid MFA code"
-
             });
-
         }
 
 
@@ -673,13 +594,9 @@ export const verifyLoginMFA = async (req, res) => {
         if (userResult.rows.length === 0) {
 
             return res.status(404).json({
-
                 success: false,
-
                 message: "User not found"
-
             });
-
         }
 
 
@@ -694,26 +611,18 @@ export const verifyLoginMFA = async (req, res) => {
         if (!user.is_active) {
 
             return res.status(403).json({
-
                 success: false,
-
                 message: "Account is disabled"
-
             });
-
         }
 
 
         if (user.is_locked) {
 
             return res.status(403).json({
-
                 success: false,
-
                 message: "Account is locked"
-
             });
-
         }
 
 
@@ -732,10 +641,537 @@ export const verifyLoginMFA = async (req, res) => {
 
 
         // ------------------------------------------------------
-        // GENERATE FINAL JWT
+        // Generate FINAL JWT
         // ------------------------------------------------------
 
         const finalToken =
+            jwt.sign(
+
+                {
+                    userId: user.id,
+
+                    email: user.email,
+
+                    username: user.username,
+
+                    mfaVerified: true
+                },
+
+                process.env.JWT_SECRET,
+
+                {
+                    expiresIn:
+                        process.env.JWT_EXPIRES_IN || "1h"
+                }
+            );
+
+
+        // ------------------------------------------------------
+        // Audit success
+        // ------------------------------------------------------
+
+        await logAudit({
+
+            userId: user.id,
+
+            action: "MFA_LOGIN_VERIFY",
+
+            resource: "MFA",
+
+            resourceId: user.id,
+
+            result: "SUCCESS",
+
+            riskLevel: "LOW",
+
+            ipAddress: req.ip,
+
+            userAgent: req.get("user-agent"),
+
+            metadata: {
+                email: user.email,
+                method: "TOTP"
+            }
+        });
+
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "MFA verification successful",
+
+            token: finalToken,
+
+            user: {
+
+                id: user.id,
+
+                username: user.username,
+
+                email: user.email,
+
+                firstName: user.first_name,
+
+                lastName: user.last_name
+            }
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ MFA login verification error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to verify MFA login"
+        });
+    }
+};
+
+
+// ============================================================
+// GENERATE BACKUP CODES
+// POST /api/mfa/backup-codes
+// ============================================================
+
+export const generateBackupCodes = async (req, res) => {
+
+    try {
+
+        const userId = req.user?.id;
+
+        if (!userId) {
+
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
+
+
+        // ------------------------------------------------------
+        // Check user
+        // ------------------------------------------------------
+
+        const userResult = await pool.query(
+            `
+            SELECT
+                id,
+                email,
+                mfa_enabled
+            FROM users
+            WHERE id = $1
+            `,
+            [userId]
+        );
+
+
+        if (userResult.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+
+        const user = userResult.rows[0];
+
+
+        // ------------------------------------------------------
+        // MFA must already be enabled
+        // ------------------------------------------------------
+
+        if (!user.mfa_enabled) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Enable and verify MFA before generating backup codes"
+            });
+        }
+
+
+        // ------------------------------------------------------
+        // Generate 10 random backup codes
+        // ------------------------------------------------------
+
+        const backupCodes = [];
+
+        for (let i = 0; i < 10; i++) {
+
+            const code =
+                crypto
+                    .randomBytes(5)
+                    .toString("hex")
+                    .toUpperCase();
+
+            backupCodes.push(code);
+        }
+
+
+        // ------------------------------------------------------
+        // Replace old backup codes
+        // ------------------------------------------------------
+
+        await pool.query(
+            `
+            DELETE FROM backup_codes
+            WHERE user_id = $1
+            `,
+            [userId]
+        );
+
+
+        // ------------------------------------------------------
+        // Store only SHA-256 hashes
+        // ------------------------------------------------------
+
+        for (const code of backupCodes) {
+
+            const codeHash =
+                crypto
+                    .createHash("sha256")
+                    .update(code)
+                    .digest("hex");
+
+            await pool.query(
+                `
+                INSERT INTO backup_codes
+                (
+                    user_id,
+                    code_hash,
+                    used
+                )
+                VALUES ($1, $2, FALSE)
+                `,
+                [
+                    userId,
+                    codeHash
+                ]
+            );
+        }
+
+
+        // ------------------------------------------------------
+        // Audit
+        // ------------------------------------------------------
+
+        await logAudit({
+
+            userId,
+
+            action: "BACKUP_CODES_GENERATE",
+
+            resource: "MFA",
+
+            resourceId: userId,
+
+            result: "SUCCESS",
+
+            riskLevel: "MEDIUM",
+
+            ipAddress: req.ip,
+
+            userAgent: req.get("user-agent"),
+
+            metadata: {
+                email: user.email,
+                count: backupCodes.length
+            }
+        });
+
+
+        // ------------------------------------------------------
+        // Return plaintext codes ONLY NOW
+        // ------------------------------------------------------
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "Backup codes generated successfully",
+
+            backupCodes,
+
+            count: backupCodes.length
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ Backup code generation error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Unable to generate backup codes"
+        });
+    }
+};
+
+
+// ============================================================
+// VERIFY BACKUP CODE DURING LOGIN
+// POST /api/mfa/verify-backup
+// ============================================================
+
+export const verifyBackupCode = async (req, res) => {
+
+    try {
+
+        const { code } = req.body;
+
+        const userId =
+            req.user?.id ||
+            req.user?.userId;
+
+
+        // ------------------------------------------------------
+        // Validate MFA session
+        // ------------------------------------------------------
+
+        if (!userId) {
+
+            return res.status(401).json({
+                success: false,
+                message: "Invalid MFA session"
+            });
+        }
+
+
+        // ------------------------------------------------------
+        // Validate code
+        // ------------------------------------------------------
+
+        if (
+            !code ||
+            typeof code !== "string"
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Backup code is required"
+            });
+        }
+
+
+        const normalizedCode =
+            code.trim().toUpperCase();
+
+
+        if (!normalizedCode) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Backup code is required"
+            });
+        }
+
+
+        // ------------------------------------------------------
+        // Hash submitted code
+        // ------------------------------------------------------
+
+        const codeHash =
+            crypto
+                .createHash("sha256")
+                .update(normalizedCode)
+                .digest("hex");
+
+
+        // ------------------------------------------------------
+        // Find unused backup code
+        // ------------------------------------------------------
+
+        const codeResult =
+            await pool.query(
+                `
+                SELECT
+                    id
+                FROM backup_codes
+                WHERE user_id = $1
+                  AND code_hash = $2
+                  AND used = FALSE
+                LIMIT 1
+                `,
+                [
+                    userId,
+                    codeHash
+                ]
+            );
+
+
+        // ------------------------------------------------------
+        // Invalid / already used
+        // ------------------------------------------------------
+
+        if (codeResult.rows.length === 0) {
+
+            try {
+
+                await logAudit({
+
+                    userId,
+
+                    action:
+                        "BACKUP_CODE_VERIFY",
+
+                    resource:
+                        "MFA",
+
+                    resourceId:
+                        userId,
+
+                    result:
+                        "FAILURE",
+
+                    riskLevel:
+                        "HIGH",
+
+                    ipAddress:
+                        req.ip,
+
+                    userAgent:
+                        req.get("user-agent"),
+
+                    metadata: {
+                        reason:
+                            "INVALID_OR_USED_BACKUP_CODE"
+                    }
+                });
+
+            } catch (auditError) {
+
+                console.error(
+                    "Audit logging error:",
+                    auditError
+                );
+            }
+
+
+            return res.status(401).json({
+
+                success: false,
+
+                message:
+                    "Invalid or already used backup code"
+            });
+        }
+
+
+        const backupCodeId =
+            codeResult.rows[0].id;
+
+
+        // ------------------------------------------------------
+        // Mark code as used
+        // ------------------------------------------------------
+
+        const updateResult =
+            await pool.query(
+                `
+                UPDATE backup_codes
+                SET
+                    used = TRUE,
+                    used_at = CURRENT_TIMESTAMP
+                WHERE id = $1
+                  AND used = FALSE
+                `,
+                [backupCodeId]
+            );
+
+
+        // ------------------------------------------------------
+        // Prevent race condition
+        // ------------------------------------------------------
+
+        if (updateResult.rowCount !== 1) {
+
+            return res.status(401).json({
+
+                success: false,
+
+                message:
+                    "Backup code has already been used"
+            });
+        }
+
+
+        // ------------------------------------------------------
+        // Get user
+        // ------------------------------------------------------
+
+        const userResult =
+            await pool.query(
+                `
+                SELECT
+                    id,
+                    username,
+                    email,
+                    first_name,
+                    last_name,
+                    is_active,
+                    is_locked
+                FROM users
+                WHERE id = $1
+                `,
+                [userId]
+            );
+
+
+        if (userResult.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+
+        const user =
+            userResult.rows[0];
+
+
+        // ------------------------------------------------------
+        // Check account
+        // ------------------------------------------------------
+
+        if (!user.is_active) {
+
+            return res.status(403).json({
+                success: false,
+                message: "Account is disabled"
+            });
+        }
+
+
+        if (user.is_locked) {
+
+            return res.status(403).json({
+                success: false,
+                message: "Account is locked"
+            });
+        }
+
+
+        // ------------------------------------------------------
+        // Generate FINAL JWT
+        // Same structure as TOTP login
+        // ------------------------------------------------------
+
+        const token =
             jwt.sign(
 
                 {
@@ -743,7 +1179,7 @@ export const verifyLoginMFA = async (req, res) => {
                         user.id,
 
                     email:
-                        req.user.email,
+                        user.email,
 
                     username:
                         user.username,
@@ -758,75 +1194,84 @@ export const verifyLoginMFA = async (req, res) => {
                     expiresIn:
                         process.env.JWT_EXPIRES_IN || "1h"
                 }
-
             );
 
 
-        console.log(
-            "========================================"
-        );
+        // ------------------------------------------------------
+        // Count remaining backup codes
+        // ------------------------------------------------------
 
-        console.log(
-            "✅ FINAL JWT GENERATED"
-        );
+        const remainingResult =
+            await pool.query(
+                `
+                SELECT
+                    COUNT(*)::int AS remaining
+                FROM backup_codes
+                WHERE user_id = $1
+                  AND used = FALSE
+                `,
+                [userId]
+            );
 
-        console.log(
-            "User:",
-            req.user.email
-        );
 
-        console.log(
-            "JWT exists:",
-            !!finalToken
-        );
-
-        console.log(
-            "========================================"
-        );
+        const remainingCodes =
+            remainingResult.rows[0].remaining;
 
 
         // ------------------------------------------------------
-        // Audit
+        // Audit success
         // ------------------------------------------------------
 
-        await logAudit({
+        try {
 
-            userId:
-                user.id,
+            await logAudit({
 
-            action:
-                "MFA_LOGIN_VERIFY",
+                userId,
 
-            resource:
-                "MFA",
+                action:
+                    "BACKUP_CODE_VERIFY",
 
-            resourceId:
-                user.id,
+                resource:
+                    "MFA",
 
-            result:
-                "SUCCESS",
+                resourceId:
+                    userId,
 
-            riskLevel:
-                "LOW",
+                result:
+                    "SUCCESS",
 
-            ipAddress:
-                req.ip,
+                riskLevel:
+                    "HIGH",
 
-            userAgent:
-                req.get("user-agent"),
+                ipAddress:
+                    req.ip,
 
-            metadata: {
+                userAgent:
+                    req.get("user-agent"),
 
-                email:
-                    user.email
+                metadata: {
 
-            }
+                    email:
+                        user.email,
 
-        });
+                    method:
+                        "BACKUP_CODE",
+
+                    remainingCodes
+                }
+            });
+
+        } catch (auditError) {
+
+            console.error(
+                "Audit logging error:",
+                auditError
+            );
+        }
 
 
         // ------------------------------------------------------
-        // RETURN FINAL JWT
+        // Success
         // ------------------------------------------------------
 
         return res.status(200).json({
@@ -834,10 +1279,9 @@ export const verifyLoginMFA = async (req, res) => {
             success: true,
 
             message:
-                "MFA verification successful",
+                "Backup code verified successfully",
 
-            token:
-                finalToken,
+            token,
 
             user: {
 
@@ -855,16 +1299,17 @@ export const verifyLoginMFA = async (req, res) => {
 
                 lastName:
                     user.last_name
+            },
 
-            }
-
+            remainingBackupCodes:
+                remainingCodes
         });
 
 
     } catch (error) {
 
         console.error(
-            "❌ MFA login verification error:",
+            "❌ Backup code verification error:",
             error
         );
 
@@ -873,18 +1318,15 @@ export const verifyLoginMFA = async (req, res) => {
             success: false,
 
             message:
-                "Unable to verify MFA login"
-
+                "Unable to verify backup code"
         });
-
     }
-
 };
-
 
 
 // ============================================================
 // DISABLE MFA
+// DELETE /api/mfa/disable
 // ============================================================
 
 export const disableMFA = async (req, res) => {
@@ -894,6 +1336,10 @@ export const disableMFA = async (req, res) => {
         const userId =
             req.user.id;
 
+
+        // ------------------------------------------------------
+        // Check MFA
+        // ------------------------------------------------------
 
         const existingMFA =
             await pool.query(
@@ -914,11 +1360,13 @@ export const disableMFA = async (req, res) => {
 
                 message:
                     "MFA is not configured"
-
             });
-
         }
 
+
+        // ------------------------------------------------------
+        // Delete MFA credentials
+        // ------------------------------------------------------
 
         await pool.query(
             `
@@ -927,6 +1375,11 @@ export const disableMFA = async (req, res) => {
             `,
             [userId]
         );
+
+
+        // ------------------------------------------------------
+        // Disable MFA
+        // ------------------------------------------------------
 
         await pool.query(
             `
@@ -937,6 +1390,23 @@ export const disableMFA = async (req, res) => {
             [userId]
         );
 
+
+        // ------------------------------------------------------
+        // Delete backup codes
+        // ------------------------------------------------------
+
+        await pool.query(
+            `
+            DELETE FROM backup_codes
+            WHERE user_id = $1
+            `,
+            [userId]
+        );
+
+
+        // ------------------------------------------------------
+        // Audit
+        // ------------------------------------------------------
 
         await logAudit({
 
@@ -967,9 +1437,7 @@ export const disableMFA = async (req, res) => {
 
                 email:
                     req.user.email
-
             }
-
         });
 
 
@@ -979,7 +1447,6 @@ export const disableMFA = async (req, res) => {
 
             message:
                 "MFA disabled successfully"
-
         });
 
 
@@ -996,9 +1463,6 @@ export const disableMFA = async (req, res) => {
 
             message:
                 "Unable to disable MFA"
-
         });
-
     }
-
 };

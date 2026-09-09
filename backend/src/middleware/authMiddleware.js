@@ -1,63 +1,47 @@
 import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
 
-
 // ============================================================
 // NORMAL AUTHENTICATION
 // ============================================================
 
 export const authenticate = (req, res, next) => {
-
     try {
-
-        const authHeader =
-            req.headers.authorization;
+        const authHeader = req.headers.authorization;
 
         if (
             !authHeader ||
             !authHeader.startsWith("Bearer ")
         ) {
-
             return res.status(401).json({
                 success: false,
                 message: "Authentication token required"
             });
-
         }
 
-        const token =
-            authHeader.substring(7).trim();
+        const token = authHeader.substring(7).trim();
 
         if (!token) {
-
             return res.status(401).json({
                 success: false,
                 message: "Authentication token required"
             });
-
         }
 
-        const decoded =
-            jwt.verify(
-                token,
-                process.env.JWT_SECRET
-            );
-
-        console.log(
-            "🔐 JWT decoded:",
-            decoded
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
         );
 
+        console.log("🔐 JWT decoded:", decoded);
 
         req.user = {
-
             id:
                 decoded.id ||
                 decoded.userId ||
                 decoded.user_id,
 
-            email:
-                decoded.email,
+            email: decoded.email,
 
             username:
                 decoded.username || null,
@@ -69,16 +53,12 @@ export const authenticate = (req, res, next) => {
                 decoded.mfaPending || false
         };
 
-
         if (!req.user.id) {
-
             return res.status(401).json({
                 success: false,
                 message: "User ID missing from authentication token"
             });
-
         }
-
 
         next();
 
@@ -93,9 +73,7 @@ export const authenticate = (req, res, next) => {
             success: false,
             message: "Invalid or expired authentication token"
         });
-
     }
-
 };
 
 
@@ -104,39 +82,30 @@ export const authenticate = (req, res, next) => {
 // ============================================================
 
 export const authenticateMfa = (req, res, next) => {
-
     try {
 
         const authHeader =
             req.headers.authorization;
 
-
         if (
             !authHeader ||
             !authHeader.startsWith("Bearer ")
         ) {
-
             return res.status(401).json({
                 success: false,
                 message: "MFA authentication token required"
             });
-
         }
-
 
         const token =
             authHeader.substring(7).trim();
 
-
         if (!token) {
-
             return res.status(401).json({
                 success: false,
                 message: "MFA authentication token required"
             });
-
         }
-
 
         const decoded =
             jwt.verify(
@@ -144,17 +113,16 @@ export const authenticateMfa = (req, res, next) => {
                 process.env.JWT_SECRET
             );
 
-
         console.log(
             "🔐 MFA JWT decoded:",
             decoded
         );
 
-
-        /*
-         * MFA verification must use the temporary
-         * MFA token generated during login.
-         */
+        // ----------------------------------------------------
+        // IMPORTANT
+        // Only temporary MFA tokens are accepted here.
+        // These tokens are created during login.
+        // ----------------------------------------------------
 
         if (decoded.mfaPending !== true) {
 
@@ -162,9 +130,7 @@ export const authenticateMfa = (req, res, next) => {
                 success: false,
                 message: "Invalid MFA session"
             });
-
         }
-
 
         req.user = {
 
@@ -180,9 +146,7 @@ export const authenticateMfa = (req, res, next) => {
                 decoded.username || null,
 
             mfaPending: true
-            
         };
-
 
         if (!req.user.id) {
 
@@ -190,15 +154,12 @@ export const authenticateMfa = (req, res, next) => {
                 success: false,
                 message: "User ID missing from MFA token"
             });
-
         }
-
 
         console.log(
             "🔐 MFA session authenticated:",
             req.user
         );
-
 
         next();
 
@@ -209,24 +170,20 @@ export const authenticateMfa = (req, res, next) => {
             error
         );
 
-
-        if (error.name === "TokenExpiredError") {
-
+        if (
+            error.name === "TokenExpiredError"
+        ) {
             return res.status(401).json({
                 success: false,
                 message: "MFA authentication token expired"
             });
-
         }
-
 
         return res.status(401).json({
             success: false,
             message: "Invalid MFA authentication token"
         });
-
     }
-
 };
 
 
@@ -240,15 +197,15 @@ export const authorize = (requiredPermission) => {
 
         try {
 
-            if (!req.user || !req.user.id) {
-
+            if (
+                !req.user ||
+                !req.user.id
+            ) {
                 return res.status(401).json({
                     success: false,
                     message: "Authentication required"
                 });
-
             }
-
 
             const result =
                 await pool.query(
@@ -274,15 +231,12 @@ export const authorize = (requiredPermission) => {
                     ]
                 );
 
-
             const allowed =
                 result.rows[0].allowed;
-
 
             console.log(
                 `🔐 RBAC: ${req.user.email} → ${requiredPermission} → ${allowed}`
             );
-
 
             if (!allowed) {
 
@@ -293,11 +247,8 @@ export const authorize = (requiredPermission) => {
                     message: "Access denied",
 
                     requiredPermission
-
                 });
-
             }
-
 
             next();
 
@@ -308,18 +259,13 @@ export const authorize = (requiredPermission) => {
                 error
             );
 
-
             return res.status(500).json({
 
                 success: false,
 
                 message:
                     "Unable to verify permissions"
-
             });
-
         }
-
     };
-
 };
